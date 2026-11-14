@@ -1,0 +1,11 @@
+# placement documents are internal - never commit them or anything derived from them
+data/raw/
+data/processed/
+eval/results_*.json
+# eval sets quote facts from the internal PDFs
+eval/*.jsonl
+.env
+__pycache__/
+*.pyc
+.venv/
+venv/

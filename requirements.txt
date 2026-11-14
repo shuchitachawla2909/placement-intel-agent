@@ -1,0 +1,22 @@
+langgraph>=1.0
+langgraph-checkpoint-sqlite>=2.0
+langchain>=1.0
+langchain-core>=1.0
+langchain-text-splitters>=0.3
+pypdf>=5.0
+pdfplumber>=0.11
+rank-bm25>=0.2.2
+faiss-cpu>=1.8
+numpy
+fastapi>=0.110
+uvicorn>=0.29
+httpx
+python-dotenv
+
+# ---- optional: install the one(s) you use ----
+# langchain-openai            # LLM_PROVIDER=openai,       EMBEDDINGS=openai:text-embedding-3-small
+# langchain-google-genai      # LLM_PROVIDER=google_genai
+# langchain-groq              # LLM_PROVIDER=groq
+# langchain-ollama            # LLM_PROVIDER=ollama,       EMBEDDINGS=ollama:nomic-embed-text
+# langchain-huggingface sentence-transformers   # EMBEDDINGS=huggingface:sentence-transformers/all-MiniLM-L6-v2
+# mcp                         # python mcp_server.py

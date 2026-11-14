@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Placement Intel Agent</title>
+<script src="/static/vendor/marked.min.js"></script>
+<script src="/static/vendor/purify.min.js"></script>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --side: #eef0f4; --text: #1d2330; --muted: #6b7280; --line: #e5e7eb;
+    --accent: #2f5bea; --user: #2f5bea; --user-text: #ffffff; --code: #f3f4f6; --hover: #e3e6ed;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #111318; --panel: #1a1d24; --side: #15181e; --text: #e6e8ee; --muted: #9aa1ad; --line: #2b303a;
+            --accent: #7c9cff; --user: #3b5bdb; --user-text: #ffffff; --code: #232733; --hover: #222631; }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg);
+         color: var(--text); display: flex; height: 100vh; }
+  button { font: inherit; }
+
+  /* sidebar */
+  aside { width: 260px; flex-shrink: 0; background: var(--side); border-right: 1px solid var(--line);
+          display: flex; flex-direction: column; }
+  aside .top { padding: 14px; }
+  #newchat { width: 100%; border: 1px solid var(--line); background: var(--panel); color: var(--text);
+             border-radius: 10px; padding: 9px 12px; cursor: pointer; text-align: left; font-weight: 600; }
+  #newchat:hover { border-color: var(--accent); }
+  aside h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted);
+             margin: 6px 16px 6px; font-weight: 600; }
+  #threads { flex: 1; overflow-y: auto; padding: 0 8px 12px; }
+  .thread { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 8px; cursor: pointer; }
+  .thread:hover { background: var(--hover); }
+  .thread.active { background: var(--hover); font-weight: 600; }
+  .thread .t { flex: 1; min-width: 0; }
+  .thread .title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13.5px; }
+  .thread .sub { font-size: 11.5px; color: var(--muted); font-weight: 400; }
+  .thread .del { border: none; background: none; color: var(--muted); cursor: pointer; padding: 2px 6px;
+                 border-radius: 6px; visibility: hidden; }
+  .thread:hover .del { visibility: visible; }
+  .thread .del:hover { color: #e5484d; }
+  .nothreads { color: var(--muted); font-size: 13px; padding: 6px 10px; }
+
+  /* main column */
+  .col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+           padding: 12px 20px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  header h1 { font-size: 17px; margin: 0; font-weight: 650; }
+  header .meta { font-size: 12px; color: var(--muted); }
+  #menu { display: none; border: 1px solid var(--line); background: none; color: var(--text); border-radius: 8px;
+          padding: 4px 10px; cursor: pointer; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .seg button { border: none; padding: 6px 12px; background: none; color: var(--text); cursor: pointer; font-size: 13px; }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button.on { background: var(--accent); color: #fff; }
+  .seg button:disabled { opacity: 0.45; cursor: not-allowed; }
+  main { flex: 1; overflow-y: auto; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 20px; }
+  .msg { margin: 14px 0; display: flex; }
+  .msg.user { justify-content: flex-end; }
+  .bubble { max-width: 100%; padding: 12px 16px; border-radius: 14px; background: var(--panel);
+            border: 1px solid var(--line); overflow-x: auto; }
+  .msg.user .bubble { background: var(--user); color: var(--user-text); border: none; max-width: 75%; white-space: pre-wrap; }
+  .bubble p { margin: 0.4em 0; }
+  .bubble table { border-collapse: collapse; margin: 8px 0; font-size: 13.5px; }
+  .bubble th, .bubble td { border: 1px solid var(--line); padding: 5px 8px; text-align: left; vertical-align: top; }
+  .bubble th { background: var(--code); }
+  .bubble code { background: var(--code); padding: 1px 4px; border-radius: 4px; }
+  .bubble h3 { font-size: 15px; margin: 12px 0 4px; }
+  .foot { margin-top: 8px; font-size: 12px; color: var(--muted); }
+  details.sources { margin-top: 6px; font-size: 12.5px; color: var(--muted); }
+  details.sources summary { cursor: pointer; }
+  details.sources ul { margin: 4px 0 0; padding-left: 18px; }
+  .empty { text-align: center; color: var(--muted); margin-top: 12vh; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 16px; }
+  .chip { border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 999px;
+          padding: 7px 12px; cursor: pointer; font-size: 13px; }
+  .chip:hover { border-color: var(--accent); }
+  .typing { color: var(--muted); font-style: italic; }
+  form { border-top: 1px solid var(--line); background: var(--panel); }
+  form .wrap { display: flex; gap: 10px; padding: 14px 20px; }
+  textarea { flex: 1; resize: none; border: 1px solid var(--line); border-radius: 12px; padding: 11px 14px;
+             font: inherit; background: var(--bg); color: var(--text); max-height: 160px; }
+  textarea:focus { outline: none; border-color: var(--accent); }
+  form button { border: none; background: var(--accent); color: #fff; border-radius: 12px; padding: 0 18px;
+                font-weight: 600; cursor: pointer; }
+  form button:disabled { opacity: 0.5; cursor: default; }
+
+  @media (max-width: 760px) {
+    aside { position: fixed; z-index: 10; top: 0; bottom: 0; left: 0; transform: translateX(-100%);
+            transition: transform 0.2s; box-shadow: 0 0 24px rgba(0,0,0,0.2); }
+    body.side-open aside { transform: none; }
+    #menu { display: inline-block; }
+  }
+</style>
+</head>
+<body>
+<aside>
+  <div class="top"><button id="newchat">+ New chat</button></div>
+  <h2>Chats</h2>
+  <div id="threads"></div>
+</aside>
+
+<div class="col">
+  <header>
+    <div style="display:flex;gap:10px;align-items:center">
+      <button id="menu" title="Chats">&#9776;</button>
+      <div>
+        <h1>Placement Intel Agent</h1>
+        <div class="meta" id="meta">LangGraph + RAG over campus placement data</div>
+      </div>
+    </div>
+    <div class="seg" title="LLM: the model plans tool calls and writes the answer. Offline RAG: rule-based routing and template answers (no LLM calls).">
+      <button id="m-llm" type="button">LLM</button>
+      <button id="m-off" type="button">Offline RAG</button>
+    </div>
+  </header>
+
+  <main id="scroll"><div class="wrap" id="chat"></div></main>
+
+  <form id="form">
+    <div class="wrap">
+      <textarea id="input" rows="1" placeholder="Ask a placement question... (Enter to send, Shift+Enter for a new line)"></textarea>
+      <button id="send" type="submit">Send</button>
+    </div>
+  </form>
+</div>
+
+<script>
+const chat = document.getElementById("chat"), scroll = document.getElementById("scroll");
+const input = document.getElementById("input"), send = document.getElementById("send");
+const threadsEl = document.getElementById("threads");
+let thread = null, mode = "offline", llmAvailable = false, busy = false;
+
+const SUGGESTIONS = [
+  "I'm CSE B.Tech, CGPA 9.7. Which companies should I prep for first?",
+  "SDE roles above 40 LPA in Hyderabad",
+  "Which openings are fully remote?",
+  "How many offers were made on Day 1?",
+];
+
+function store(k, v) { try { v === undefined ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} }
+function load(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function md(text) {
+  const html = window.marked ? marked.parse(text) : esc(text);
+  return window.DOMPurify ? DOMPurify.sanitize(html) : html;
+}
+
+/* ---------- mode switch ---------- */
+function setMode(m) {
+  if (m === "llm" && !llmAvailable) m = "offline";
+  mode = m; store("pia_mode", m);
+  document.getElementById("m-llm").classList.toggle("on", m === "llm");
+  document.getElementById("m-off").classList.toggle("on", m === "offline");
+}
+document.getElementById("m-llm").addEventListener("click", () => setMode("llm"));
+document.getElementById("m-off").addEventListener("click", () => setMode("offline"));
+
+/* ---------- messages ---------- */
+function showEmpty() {
+  chat.innerHTML = '<div class="empty" id="empty"><div>Ask about companies, CTC, eligibility, interview days or what to prep first.</div>' +
+    '<div class="chips">' + SUGGESTIONS.map(s => '<button class="chip">' + esc(s) + "</button>").join("") + "</div></div>";
+  chat.querySelectorAll(".chip").forEach(c => c.addEventListener("click", () => ask(c.textContent)));
+}
+
+function add(role, html) {
+  document.getElementById("empty")?.remove();
+  const row = document.createElement("div");
+  row.className = "msg " + role;
+  const b = document.createElement("div");
+  b.className = "bubble";
+  if (role === "user") b.textContent = html; else b.innerHTML = html;
+  row.appendChild(b);
+  chat.appendChild(row);
+  scroll.scrollTop = scroll.scrollHeight;
+  return b;
+}
+
+function renderAnswer(res) {
+  let html = md(res.answer || "(no answer)");
+  if (res.sources?.length) {
+    html += '<details class="sources"><summary>Sources (' + res.sources.length + ")</summary><ul>" +
+            res.sources.map(s => "<li>[" + esc(s.tag) + "] " + esc(s.source) + "</li>").join("") + "</ul></details>";
+  }
+  const tools = (res.tools || (res.tools_used || []).map(t => t.tool)).join(", ");
+  const parts = [res.mode === "llm" ? "LLM" : "Offline RAG", res.route || "", tools];
+  if (res.latency_s != null) parts.push(res.latency_s + "s");
+  if (res.time) parts.push(res.time);
+  return html + '<div class="foot">' + parts.filter(Boolean).map(esc).join(" · ") + "</div>";
+}
+
+/* ---------- conversations ---------- */
+async function refreshThreads() {
+  try {
+    const list = (await (await fetch("/threads")).json()).threads || [];
+    threadsEl.innerHTML = list.length ? "" : '<div class="nothreads">No chats yet</div>';
+    for (const t of list) {
+      const row = document.createElement("div");
+      row.className = "thread" + (t.thread_id === thread ? " active" : "");
+      row.innerHTML = '<div class="t"><div class="title">' + esc(t.title) + '</div><div class="sub">' +
+                      esc(t.updated) + " · " + t.turns + (t.turns === 1 ? " question" : " questions") + "</div></div>" +
+                      '<button class="del" title="Delete chat">&times;</button>';
+      row.addEventListener("click", () => openThread(t.thread_id));
+      row.querySelector(".del").addEventListener("click", async e => {
+        e.stopPropagation();
+        if (!confirm("Delete this chat?")) return;
+        await fetch("/threads/" + encodeURIComponent(t.thread_id), { method: "DELETE" });
+        if (t.thread_id === thread) newChat(); else refreshThreads();
+      });
+      threadsEl.appendChild(row);
+    }
+  } catch (e) {}
+}
+
+async function openThread(id) {
+  if (busy) return;
+  thread = id; store("pia_thread", id);
+  document.body.classList.remove("side-open");
+  chat.innerHTML = "";
+  try {
+    const turns = (await (await fetch("/history/" + encodeURIComponent(id))).json()).turns || [];
+    if (!turns.length) showEmpty();
+    for (const t of turns) { add("user", t.question); add("bot", renderAnswer(t)); }
+  } catch (e) { showEmpty(); }
+  refreshThreads();
+  input.focus();
+}
+
+function newChat() {
+  if (busy) return;
+  thread = "web-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  store("pia_thread", thread);
+  document.body.classList.remove("side-open");
+  showEmpty();
+  refreshThreads();
+  input.focus();
+}
+
+/* ---------- ask ---------- */
+async function ask(q) {
+  if (!q.trim() || busy) return;
+  busy = true; send.disabled = true;
+  add("user", q);
+  input.value = ""; autosize();
+  const bubble = add("bot", '<span class="typing">Thinking...</span>');
+  try {
+    const r = await fetch("/chat", { method: "POST", headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({ message: q, thread_id: thread, mode: mode }) });
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
+    bubble.innerHTML = renderAnswer(await r.json());
+    refreshThreads();
+  } catch (e) {
+    bubble.innerHTML = "<b>Error:</b> " + esc(e.message || e);
+  }
+  busy = false; send.disabled = false;
+  input.focus();
+  scroll.scrollTop = scroll.scrollHeight;
+}
+
+function autosize() { input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, 160) + "px"; }
+input.addEventListener("input", autosize);
+input.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ask(input.value); } });
+document.getElementById("form").addEventListener("submit", e => { e.preventDefault(); ask(input.value); });
+document.getElementById("newchat").addEventListener("click", newChat);
+document.getElementById("menu").addEventListener("click", () => document.body.classList.toggle("side-open"));
+
+/* ---------- start ---------- */
+setMode("offline");
+const saved = load("pia_thread");
+if (saved) openThread(saved); else newChat();
+fetch("/health").then(r => r.json()).then(h => {
+  llmAvailable = !!h.llm_available;
+  const llmBtn = document.getElementById("m-llm");
+  llmBtn.disabled = !llmAvailable;
+  if (!llmAvailable) llmBtn.title = "No LLM configured (set LLM_PROVIDER and the API key in .env)";
+  setMode(load("pia_mode") || "llm");
+  document.getElementById("meta").textContent =
+    (h.llm === "none" ? "offline rules" : "LLM: " + h.llm) + " · retrieval: " + h.retrieval + " · " + h.documents + " docs";
+}).catch(() => {});
+</script>
+</body>
+</html>
