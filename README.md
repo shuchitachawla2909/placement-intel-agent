@@ -5,6 +5,10 @@ come first, what each role pays, who is eligible, how the drive went day by day,
 
 Illustrative output (company names and figures are placeholders; the real placement data is not published):
 
+
+https://github.com/user-attachments/assets/a6561a4d-4e69-4971-9040-0424a6db6ea7
+
+
 ```
 you> I have CGPA 9.7, CSE, strong in C++ - which companies should I prep for first, and what to study?
 
